@@ -7,13 +7,22 @@ import PIL # optional
 import numpy as np
 import png
 import re
+from operator import itemgetter
 from skimage import util
+
+work_dir = "/home/fundamentia/"
 
 #convertir diccom a png
 def convert_diccom_to_png(in_file):
   ds = dicom.dcmread(os.path.join(in_file))
   pixel_array_numpy = ds.pixel_array
-  return pixel_array_numpy
+  try:
+    cv2.imwrite(os.path.join(work_dir + "borrar.png"), pixel_array_numpy)
+    img = cv2.imread(os.path.join(work_dir + "borrar.png"))
+  finally:
+    # borramos la imagen tmp
+    os.remove(os.path.join(work_dir + "borrar.png"))
+  return img 
 
 
 def show_diccom_img(diccom_path):
@@ -28,7 +37,8 @@ def crop_img(img, x = 1, y = 4):
   y_end = img.shape[0] - y_start
   x_start = int(img.shape[1]/(100-x))
   x_end = img.shape[1] - x_start
-  print(y_start, y_end, x_start, x_end)
+  # print(y_start, y_end, x_start, x_end)
+  # print(y_end / x_end)
   # recortamos la imagen
   crop_img = img[y_start:y_end, x_start:x_end]
   return crop_img
@@ -38,8 +48,11 @@ def crop_img(img, x = 1, y = 4):
 def rescale_img(img_object):
   # creamos una imagen negra de 1024x1024
   img_black = np.zeros((1024, 1024, 3), dtype="uint8")
+  # calculamos el ratio de escalado
+  ratio = img_object.shape[0] / img_object.shape[1]
+  x = int(1024 / ratio)
   # leemos las dos imagenses y las reescalamos
-  img_object = cv2.resize(img_object, (768, 1024))
+  img_object = cv2.resize(img_object, (x, 1024))
   # posicionamos la imagen en la parte izquierda de la imagen negra
   x = 0
   y = 0
@@ -89,39 +102,115 @@ def morphological_erosion(img, kernel_size=5):
   return erosion
 
 
+def detect_bounding_box(img):
+  #  cargamos la imagen
+  # img = cv2.imread(image_path)
+  # detectamos los contornos de la imagen
+  norm = util.img_as_ubyte((img - img.min()) / (img.max() - img.min()))
+  gray = cv2.cvtColor(norm, cv2.COLOR_RGB2GRAY)
+  contours,_ = cv2.findContours(gray, 1, 1) # not copying here will throw an error
+  # detectamos el area de la masa
+  rect = cv2.minAreaRect(contours[0])
+  # calculamos sus puntos
+  box = cv2.boxPoints(rect)
+  box = np.int0(box)
+  # print(box)
+  max_x = max(box, key=itemgetter(1))[0]  
+  min_x = min(box, key=itemgetter(1))[0]
+  max_y = max(box, key=itemgetter(0))[1]
+  min_y = min(box, key=itemgetter(1))[1]
+  return max_x, min_x, max_y, min_y
+
+
+def create_pascal_vocal_xml(image_list, name):
+  base_xml = '<annotation>\n\t<folder/>\n\t<filename>{name}</filename>\n\t<path/>\n\t<source>\n\t\t<database>https://www.cancerimagingarchive.net/</database>\n\t</source>\n\t<size>\n\t\t<width>1024</width>\n\t\t<height>1024</height>\n\t\t<depth>3</depth>\n\t</size>\n\t<segmented>0</segmented>\n\t{objects}\n</annotation>'
+  base_objects_xml = '<object>\n\t\t<name>Mass</name>\n\t\t<pose>Unspecified</pose>\n\t\t<truncated>0</truncated>\n\t\t<difficult>0</difficult>\n\t\t<bndbox>\n\t\t\t<xmin>{x_min}</xmin>\n\t\t\t<ymin>{y_min}</ymin>\n\t\t\t<xmax>{x_max}</xmax>\n\t\t\t<ymax>{y_max}</ymax>\n\t\t</bndbox>\n\t</object>'
+  objects_xml = ''
+  for image in image_list:
+    x_min, x_max, y_min, y_max = detect_bounding_box(image)
+    objects_xml = objects_xml + base_objects_xml.format(x_min = x_min, x_max = x_max, y_min = y_min, y_max = y_max)
+
+  xml = base_xml.format(name = re.sub("_\d.png", "", name), objects = objects_xml)
+  return xml
+
+
 def process_ddsm_folder(input_folder, output_folder):
   for dir_path, dir_names, file_names in os.walk(input_folder, topdown=False):
-    i = 1
     for file_name in file_names:
-      if file_name.endswith(".dcm"):
-        is_mask = "mask" in file_name if True else False
-        #  obtenemos el nombre de la carpeta original
-        folder_name = os.path.split(dir_path)[-2]
-        # convertir diccom a png
-        img = convert_diccom_to_png(os.path.join(dir_path, file_name))
-        # recortar imagen
-        img = crop_img(img)
-        # reescalar imagen
-        img = rescale_img(img)
-        if not is_mask:
-          # eliminar ruido
-          img = remove_noise(img)
-          # CLAHE
-          img = clahe(img)
-          # erosionar
-          img = morphological_erosion(img)
-          # guardar imagen
-          cv2.imwrite(os.path.join(output_folder + "mamografias", folder_name + ".png"), img)
-        else:
-          if os.path.exists(os.path.join(output_folder + "mascaras", folder_name + "_" + str(i) + ".png")):
-            i +=1
-          # guardar imagen en la 
-          cv2.imwrite(os.path.join(output_folder + "mascaras", file_name + "i".png), img)
-        print("Processed: " + file_name)
+      try:
+        if file_name.endswith(".dcm"):
+          if os.path.getsize(os.path.join(dir_path, file_name)) < 6534154:
+            continue
+          is_mask = "mask" in dir_path if True else False
+          if is_mask:
+            continue
+          # if "1-1.dcm" in file_name and is_mask:
+          #   continue
+          #  obtenemos el nombre de la carpeta original
+          # print(dir_path)
+          folder_name = re.search(input_folder + "(.+?)(_\d+)?/.+", dir_path).group(1)
+          # convertir diccom a png
+          img = convert_diccom_to_png(os.path.join(dir_path, file_name))
+          # recortar imagen
+          img = crop_img(img)
+          # reescalar imagen
+          img = rescale_img(img)
+          if not is_mask:
+            # eliminar ruido
+            img = remove_noise(img)
+            # CLAHE
+            img = clahe(img)
+            # erosionar
+            # img = morphological_erosion(img)
+            # guardar imagen
+            cv2.imwrite(os.path.join(output_folder + "no_erosion/", folder_name + ".png"), img)
+          else:
+            i = 1
+            while os.path.exists(os.path.join(output_folder + "mascaras/", folder_name + "_" + str(i) + ".png")):
+              i +=1
+            # guardar imagen en la 
+            cv2.imwrite(os.path.join(output_folder + "mascaras", folder_name + "_" + str(i) + ".png"), img)
+      except Exception as e:
+        print("Processed: " + dir_path)
+
+
+def generate_pascal_voc_xml(input_folder, output_folder):
+  images_list = []
+  last_name = ""
+  for file in sorted(os.listdir(input_folder)):
+    # print(file)
+    # if file.endswith("Mass-Training_P_01656_LEFT_CC_1.png"):
+    #   file = file
+    # si es la primera iteracion inseetamos el elemento en la lista
+    if len(images_list) == 0:
+      images_list.append(cv2.imread((os.path.join(input_folder, file))))
+      last_name = file
+    elif file.endswith("_1.png"):
+      # si termina con _1, hacambiado la mamografia, generamos el xml y reiniciamos la lista
+      xml = create_pascal_vocal_xml(images_list, last_name)
+      # guardamos el xml
+      with open(os.path.join(output_folder, last_name.replace(".png", ".xml")), "w") as xml_file:
+        xml_file.write(xml)
+      # reinicamos la lista 
+      images_list = []
+      images_list.append(cv2.imread((os.path.join(input_folder, file))))
+      last_name = file
+    else: 
+      # si no termina con _1, seguimos con la misma mamografia e insertamos el elemento en la lista
+      images_list.append(cv2.imread((os.path.join(input_folder, file))))
+  
+  # si la lista no esta vacia, generamos el xml
+  xml = create_pascal_vocal_xml(images_list, last_name)
+  # guardamos el xml
+  with open(os.path.join(output_folder, last_name.replace(".png", ".xml")), "w") as xml_file:
+    xml_file.write(xml)
+
+
 
 
 
 # input_path = "/home/fundamentia/python/corpus/manifest-ZkhPvrLo5216730872708713142/CBIS-DDSM/"
-input_path = "/home/fundamentia/python/corpus/pruebas/"
+input_path = "/home/fundamentia/python/corpus/manifest-ZkhPvrLo5216730872708713142/CBIS-DDSM/"
 output_path = "/home/fundamentia/python/corpus/transformadas/"
-process_ddsm_folder(input_path, output_path)
+# process_ddsm_folder(input_path, output_path)
+generate_pascal_voc_xml(output_path + "mascaras/", output_path + "xml/")
