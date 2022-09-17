@@ -110,15 +110,16 @@ def detect_bounding_box(img):
   gray = cv2.cvtColor(norm, cv2.COLOR_RGB2GRAY)
   contours,_ = cv2.findContours(gray, 1, 1) # not copying here will throw an error
   # detectamos el area de la masa
-  rect = cv2.minAreaRect(contours[0])
+  max_area = max(contours, key=cv2.contourArea)
+  rect = cv2.minAreaRect(max_area)
   # calculamos sus puntos
   box = cv2.boxPoints(rect)
   box = np.int0(box)
   # print(box)
-  max_x = max(box, key=itemgetter(1))[0]  
-  min_x = min(box, key=itemgetter(1))[0]
-  max_y = max(box, key=itemgetter(0))[1]
-  min_y = min(box, key=itemgetter(1))[1]
+  max_x = [max(i) for i in zip(*box)][0]   
+  min_x = [min(i) for i in zip(*box)][0] 
+  max_y = [max(i) for i in zip(*box)][1] 
+  min_y = [min(i) for i in zip(*box)][1] 
   return max_x, min_x, max_y, min_y
 
 
@@ -127,7 +128,7 @@ def create_pascal_vocal_xml(image_list, name):
   base_objects_xml = '<object>\n\t\t<name>Mass</name>\n\t\t<pose>Unspecified</pose>\n\t\t<truncated>0</truncated>\n\t\t<difficult>0</difficult>\n\t\t<bndbox>\n\t\t\t<xmin>{x_min}</xmin>\n\t\t\t<ymin>{y_min}</ymin>\n\t\t\t<xmax>{x_max}</xmax>\n\t\t\t<ymax>{y_max}</ymax>\n\t\t</bndbox>\n\t</object>'
   objects_xml = ''
   for image in image_list:
-    x_min, x_max, y_min, y_max = detect_bounding_box(image)
+    x_max, x_min, y_max, y_min = detect_bounding_box(image)
     objects_xml = objects_xml + base_objects_xml.format(x_min = x_min, x_max = x_max, y_min = y_min, y_max = y_max)
 
   xml = base_xml.format(name = re.sub("_\d.png", "", name), objects = objects_xml)
