@@ -47,12 +47,12 @@ def crop_img(img, x = 1, y = 4):
 # reescalar imagen con black background a 1024x1024
 def rescale_img(img_object):
   # creamos una imagen negra de 1024x1024
-  img_black = np.zeros((1024, 1024, 3), dtype="uint8")
+  img_black = np.zeros((640, 640, 3), dtype="uint8")
   # calculamos el ratio de escalado
   ratio = img_object.shape[0] / img_object.shape[1]
-  x = int(1024 / ratio)
+  x = int(640 / ratio)
   # leemos las dos imagenses y las reescalamos
-  img_object = cv2.resize(img_object, (x, 1024))
+  img_object = cv2.resize(img_object, (x, 640))
   # posicionamos la imagen en la parte izquierda de la imagen negra
   x = 0
   y = 0
@@ -124,12 +124,12 @@ def detect_bounding_box(img):
 
 
 def create_pascal_vocal_xml(image_list, name):
-  base_xml = '<annotation>\n\t<folder/>\n\t<filename>{name}</filename>\n\t<path/>\n\t<source>\n\t\t<database>https://www.cancerimagingarchive.net/</database>\n\t</source>\n\t<size>\n\t\t<width>1024</width>\n\t\t<height>1024</height>\n\t\t<depth>3</depth>\n\t</size>\n\t<segmented>0</segmented>\n\t{objects}\n</annotation>'
-  base_objects_xml = '<object>\n\t\t<name>Mass</name>\n\t\t<pose>Unspecified</pose>\n\t\t<truncated>0</truncated>\n\t\t<difficult>0</difficult>\n\t\t<bndbox>\n\t\t\t<xmin>{x_min}</xmin>\n\t\t\t<ymin>{y_min}</ymin>\n\t\t\t<xmax>{x_max}</xmax>\n\t\t\t<ymax>{y_max}</ymax>\n\t\t</bndbox>\n\t</object>'
+  base_xml = '<annotation>\n\t<folder/>\n\t<filename>{name}</filename>\n\t<path/>\n\t<source>\n\t\t<database>https://www.cancerimagingarchive.net/</database>\n\t</source>\n\t<size>\n\t\t<width>640</width>\n\t\t<height>640</height>\n\t\t<depth>3</depth>\n\t</size>\n\t<segmented>0</segmented>\n\t{objects}\n</annotation>'
+  base_objects_xml = '<object>\n\t\t<name>{type}</name>\n\t\t<pose>Unspecified</pose>\n\t\t<truncated>0</truncated>\n\t\t<difficult>0</difficult>\n\t\t<bndbox>\n\t\t\t<xmin>{x_min}</xmin>\n\t\t\t<ymin>{y_min}</ymin>\n\t\t\t<xmax>{x_max}</xmax>\n\t\t\t<ymax>{y_max}</ymax>\n\t\t</bndbox>\n\t</object>'
   objects_xml = ''
   for image in image_list:
     x_max, x_min, y_max, y_min = detect_bounding_box(image)
-    objects_xml = objects_xml + base_objects_xml.format(x_min = x_min, x_max = x_max, y_min = y_min, y_max = y_max)
+    objects_xml = objects_xml + base_objects_xml.format(type = 'calc' if "Calc" in name else 'mass', x_min = x_min, x_max = x_max, y_min = y_min, y_max = y_max)
 
   xml = base_xml.format(name = re.sub("_\d.png", "", name), objects = objects_xml)
   return xml
@@ -143,7 +143,7 @@ def process_ddsm_folder(input_folder, output_folder):
           if os.path.getsize(os.path.join(dir_path, file_name)) < 6534154:
             continue
           is_mask = "mask" in dir_path if True else False
-          if is_mask:
+          if not is_mask:
             continue
           # if "1-1.dcm" in file_name and is_mask:
           #   continue
@@ -161,10 +161,11 @@ def process_ddsm_folder(input_folder, output_folder):
             img = remove_noise(img)
             # CLAHE
             img = clahe(img)
-            # erosionar
-            # img = morphological_erosion(img)
-            # guardar imagen
             cv2.imwrite(os.path.join(output_folder + "no_erosion/", folder_name + ".png"), img)
+            # erosionar
+            img = morphological_erosion(img)
+            # guardar imagen
+            cv2.imwrite(os.path.join(output_folder + "img/", folder_name + ".png"), img)
           else:
             i = 1
             while os.path.exists(os.path.join(output_folder + "mascaras/", folder_name + "_" + str(i) + ".png")):
@@ -210,8 +211,7 @@ def generate_pascal_voc_xml(input_folder, output_folder):
 
 
 
-# input_path = "/home/fundamentia/python/corpus/manifest-ZkhPvrLo5216730872708713142/CBIS-DDSM/"
 input_path = "/home/fundamentia/python/corpus/manifest-ZkhPvrLo5216730872708713142/CBIS-DDSM/"
-output_path = "/home/fundamentia/python/corpus/transformadas/"
+output_path = "/home/fundamentia/python/corpus/transformadas_640/"
 # process_ddsm_folder(input_path, output_path)
-generate_pascal_voc_xml(output_path + "mascaras/", output_path + "xml/")
+generate_pascal_voc_xml(output_path + "mascaras/", output_path + "xml_separadas/")
