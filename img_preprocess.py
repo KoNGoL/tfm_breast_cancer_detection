@@ -9,6 +9,7 @@ import png
 import re
 from operator import itemgetter
 from skimage import util
+import random
 
 work_dir = "/home/fundamentia/"
 
@@ -45,14 +46,14 @@ def crop_img(img, x = 1, y = 4):
 
 
 # reescalar imagen con black background a 1024x1024
-def rescale_img(img_object):
+def rescale_img(img_object, width, height):
   # creamos una imagen negra de 1024x1024
-  img_black = np.zeros((640, 640, 3), dtype="uint8")
+  img_black = np.zeros((width, height, 3), dtype="uint8")
   # calculamos el ratio de escalado
-  ratio = img_object.shape[0] / img_object.shape[1]
-  x = int(640 / ratio)
-  # leemos las dos imagenses y las reescalamos
-  img_object = cv2.resize(img_object, (x, 640))
+  # ratio = img_object.shape[0] / img_object.shape[1]
+  # x = int(width / ratio)
+  # leemos la imagen y la reescalamos
+  img_object = cv2.resize(img_object, (width, height))
   # posicionamos la imagen en la parte izquierda de la imagen negra
   x = 0
   y = 0
@@ -122,17 +123,23 @@ def detect_bounding_box(img):
   min_y = [min(i) for i in zip(*box)][1] 
   return max_x, min_x, max_y, min_y
 
+max_width = 0
+max_height = 0
 
-def create_pascal_vocal_xml(image_list, name):
+def create_pascal_vocal_xml(image_list, name, max_width, max_height):
   base_xml = '<annotation>\n\t<folder/>\n\t<filename>{name}</filename>\n\t<path/>\n\t<source>\n\t\t<database>https://www.cancerimagingarchive.net/</database>\n\t</source>\n\t<size>\n\t\t<width>640</width>\n\t\t<height>640</height>\n\t\t<depth>3</depth>\n\t</size>\n\t<segmented>0</segmented>\n\t{objects}\n</annotation>'
   base_objects_xml = '<object>\n\t\t<name>{type}</name>\n\t\t<pose>Unspecified</pose>\n\t\t<truncated>0</truncated>\n\t\t<difficult>0</difficult>\n\t\t<bndbox>\n\t\t\t<xmin>{x_min}</xmin>\n\t\t\t<ymin>{y_min}</ymin>\n\t\t\t<xmax>{x_max}</xmax>\n\t\t\t<ymax>{y_max}</ymax>\n\t\t</bndbox>\n\t</object>'
   objects_xml = ''
   for image in image_list:
     x_max, x_min, y_max, y_min = detect_bounding_box(image)
+    if (x_max - x_min) > max_width:
+      max_width = x_max - x_min
+    if (y_max - y_min) > max_height:
+      max_height = y_max - y_min
     objects_xml = objects_xml + base_objects_xml.format(type = 'calc' if "Calc" in name else 'mass', x_min = x_min, x_max = x_max, y_min = y_min, y_max = y_max)
 
   xml = base_xml.format(name = re.sub("_\d.png", "", name), objects = objects_xml)
-  return xml
+  return xml, max_width, max_height
 
 
 def process_ddsm_folder(input_folder, output_folder):
@@ -142,7 +149,7 @@ def process_ddsm_folder(input_folder, output_folder):
         if file_name.endswith(".dcm"):
           if os.path.getsize(os.path.join(dir_path, file_name)) < 6534154:
             continue
-          is_mask = "mask" in dir_path if True else False
+          is_mask = "mask"  in dir_path if True else False
           if not is_mask:
             continue
           # if "1-1.dcm" in file_name and is_mask:
@@ -152,26 +159,27 @@ def process_ddsm_folder(input_folder, output_folder):
           folder_name = re.search(input_folder + "(.+?)(_\d+)?/.+", dir_path).group(1)
           # convertir diccom a png
           img = convert_diccom_to_png(os.path.join(dir_path, file_name))
+          # cv2.imwrite(os.path.join(output_folder + "originales_mask/", folder_name + ".png"), img)
           # recortar imagen
-          img = crop_img(img)
-          # reescalar imagen
-          img = rescale_img(img)
+          # img = crop_img(img)
+          # # reescalar imagen
+          # img = rescale_img(img, 640, 640)
           if not is_mask:
-            # eliminar ruido
+          #   # eliminar ruido
             img = remove_noise(img)
-            # CLAHE
-            img = clahe(img)
-            cv2.imwrite(os.path.join(output_folder + "no_erosion/", folder_name + ".png"), img)
-            # erosionar
-            img = morphological_erosion(img)
-            # guardar imagen
-            cv2.imwrite(os.path.join(output_folder + "img/", folder_name + ".png"), img)
+          #   # CLAHE
+          #   img = clahe(img)
+          #   cv2.imwrite(os.path.join(output_folder + "no_erosion/", folder_name + ".png"), img)
+          #   # erosionar
+          #   img = morphological_erosion(img)
+          #   # guardar imagen
+          #   cv2.imwrite(os.path.join(output_folder + "img/", folder_name + ".png"), img)
           else:
             i = 1
-            while os.path.exists(os.path.join(output_folder + "mascaras/", folder_name + "_" + str(i) + ".png")):
+            while os.path.exists(os.path.join(output_folder + "originales_mask/", folder_name + "_" + str(i) + ".png")):
               i +=1
             # guardar imagen en la 
-            cv2.imwrite(os.path.join(output_folder + "mascaras", folder_name + "_" + str(i) + ".png"), img)
+            cv2.imwrite(os.path.join(output_folder + "originales_mask", folder_name + "_" + str(i) + ".png"), img)
       except Exception as e:
         print("Processed: " + dir_path)
 
@@ -179,6 +187,8 @@ def process_ddsm_folder(input_folder, output_folder):
 def generate_pascal_voc_xml(input_folder, output_folder):
   images_list = []
   last_name = ""
+  max_width = 0
+  max_height = 0
   for file in sorted(os.listdir(input_folder)):
     # print(file)
     # if file.endswith("Mass-Training_P_01656_LEFT_CC_1.png"):
@@ -189,7 +199,7 @@ def generate_pascal_voc_xml(input_folder, output_folder):
       last_name = file
     elif file.endswith("_1.png"):
       # si termina con _1, hacambiado la mamografia, generamos el xml y reiniciamos la lista
-      xml = create_pascal_vocal_xml(images_list, last_name)
+      xml, max_width, max_height = create_pascal_vocal_xml(images_list, last_name, max_width, max_height)
       # guardamos el xml
       with open(os.path.join(output_folder, last_name.replace(".png", ".xml")), "w") as xml_file:
         xml_file.write(xml)
@@ -202,16 +212,77 @@ def generate_pascal_voc_xml(input_folder, output_folder):
       images_list.append(cv2.imread((os.path.join(input_folder, file))))
   
   # si la lista no esta vacia, generamos el xml
-  xml = create_pascal_vocal_xml(images_list, last_name)
+  xml, max_width, max_height = create_pascal_vocal_xml(images_list, last_name, max_width, max_height)
   # guardamos el xml
   with open(os.path.join(output_folder, last_name.replace(".png", ".xml")), "w") as xml_file:
     xml_file.write(xml)
+  print("MAX WIDTH: " + str(max_width))
+  print("MAX HEIGHT: " + str(max_height))
 
 
+def cut_reescale_anomaly_img(input_folder_xml, input_folder_png, output_folder):
+  for file_name in os.listdir(input_folder_xml):
+    # leemos el XML
+    # file_name = "Calc-Test_P_00077_RIGHT_MLO_1.xml"
+    with open(input_folder_xml + file_name, 'r') as file:
+     data = file.read()
+    file.close()
+    # obtenemos la imagen
+    name = re.search('filename>(.+?)<', data).group(1)
+    img = cv2.imread(os.path.join(input_folder_png, name + ".png"))
+    try:
+      # obtenemos los valores de los bounding boxes
+      # aplicamos la regex y recorremos los matches
+      matches = re.findall('<bndbox>[\s\S]+?xmin>(\d+)[\s\S]+?ymin>(\d+)[\s\S]+?xmax>(\d+)[\s\S]+?ymax>(\d+)[\s\S]+?</bndbox>', data)
 
+      count = 1
+      for match in matches:
+        xmin = int(match[0])
+        ymin = int(match[1])
+        xmax = int(match[2])
+        ymax = int(match[3])
+        # ajustamos los valores para dar contexto a la img
+        xmin = xmin - 100 if xmin - 100 > 0 else 0
+        ymin = ymin - 100 if ymin - 100 > 0 else 0
+        xmax = xmax + 100 if xmax + 100 < img.shape[1] else img.shape[1]
+        ymax = ymax + 100 if ymax + 100 < img.shape[0] else img.shape[0]
+        # recortamos la imagen
+        img = img[ymin:ymax, xmin:xmax]
+        # preprocesamos la imagen
+        img = crop_img(img)
+        # reescalar imagen
+        img = rescale_img(img, 224, 224)
+        # eliminar ruido
+        img = remove_noise(img)
+        # CLAHE
+        img = clahe(img)
+        #guardamos la imagen
+        anomali_type = 'Calc'
+        if "Mass" in name: 
+          anomali_type = "Mass"
+        cv2.imwrite(os.path.join(output_folder + "/" + anomali_type, name + "_" + str(count) + ".png"), img)
+        count+=1
+    except Exception as e:
+      print(img.shape)
+    
 
 
 input_path = "/home/fundamentia/python/corpus/manifest-ZkhPvrLo5216730872708713142/CBIS-DDSM/"
 output_path = "/home/fundamentia/python/corpus/transformadas_640/"
 # process_ddsm_folder(input_path, output_path)
-generate_pascal_voc_xml(output_path + "mascaras/", output_path + "xml_separadas/")
+# generate_pascal_voc_xml(output_path + "originales_mask/", output_path + "xml_separadas_originales/")
+
+input_folder_xml = "/home/fundamentia/python/corpus/transformadas_640/xml_separadas_originales/"
+input_folder_png = "/home/fundamentia/python/corpus/transformadas_640/originales/"
+output_folder = "/home/fundamentia/python/corpus/transformadas_640/clasificadas/"
+# cut_reescale_anomaly_img(input_folder_xml, input_folder_png, output_folder)
+
+def create_k_fold(input_folder, output_folder):
+  # leemos todas las imagenes
+  for dir_name in os.listdir(input_folder):
+    # leemos todas las imagenes de la carpeta
+    images = []
+    for file_name in os.listdir(input_folder + dir_name):
+      images.append(file_name)
+    # reodrdenamos la lista de forma aleatoria
+    random.shuffle(images)
