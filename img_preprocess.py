@@ -1,17 +1,12 @@
 import matplotlib.pyplot as plt
 import pydicom as dicom
 import os
-# from google.colab.patches import cv2_imshow as cv2
 import cv2 as cv2
-import PIL # optional
 import numpy as np
-import png
 import re
-from operator import itemgetter
 from skimage import util
-import random
-
-work_dir = "/home/fundamentia/"
+from random import randrange
+from PIL import Image
 
 #convertir diccom a png
 def convert_diccom_to_png(in_file):
@@ -226,6 +221,7 @@ def cut_reescale_anomaly_img(input_folder_xml, input_folder_png, output_folder):
     # file_name = "Calc-Test_P_00077_RIGHT_MLO_1.xml"
     with open(input_folder_xml + file_name, 'r') as file:
      data = file.read()
+
     file.close()
     # obtenemos la imagen
     name = re.search('filename>(.+?)<', data).group(1)
@@ -264,7 +260,21 @@ def cut_reescale_anomaly_img(input_folder_xml, input_folder_png, output_folder):
         count+=1
     except Exception as e:
       print(img.shape)
-    
+
+
+def create_random_img(input_folder, output_folder):
+  for file in os.listdir(input_folder):
+    img = cv2.imread(os.path.join(input_folder, file))  
+
+    x, x_min, y, y_min = detect_bounding_box(img)
+
+    matrix = 300   
+
+    x1 = randrange(x_min, x - matrix)
+    y1 = randrange(y_min, y - matrix)
+    new_image = img[y1:y1 + matrix, x1 : x1 + matrix]
+    new_image = rescale_img(new_image, 224, 224)
+    cv2.imwrite(os.path.join(output_folder + "/Otros", file), new_image)
 
 
 input_path = "/home/fundamentia/python/corpus/manifest-ZkhPvrLo5216730872708713142/CBIS-DDSM/"
@@ -272,17 +282,11 @@ output_path = "/home/fundamentia/python/corpus/transformadas_640/"
 # process_ddsm_folder(input_path, output_path)
 # generate_pascal_voc_xml(output_path + "originales_mask/", output_path + "xml_separadas_originales/")
 
+# create_random_img("/home/fundamentia/python/corpus/transformadas_640/originales", "/home/fundamentia/python/corpus/transformadas_640/clasificadas/imagenes/")
+
 input_folder_xml = "/home/fundamentia/python/corpus/transformadas_640/xml_separadas_originales/"
 input_folder_png = "/home/fundamentia/python/corpus/transformadas_640/originales/"
 output_folder = "/home/fundamentia/python/corpus/transformadas_640/clasificadas/"
 # cut_reescale_anomaly_img(input_folder_xml, input_folder_png, output_folder)
 
-def create_k_fold(input_folder, output_folder):
-  # leemos todas las imagenes
-  for dir_name in os.listdir(input_folder):
-    # leemos todas las imagenes de la carpeta
-    images = []
-    for file_name in os.listdir(input_folder + dir_name):
-      images.append(file_name)
-    # reodrdenamos la lista de forma aleatoria
-    random.shuffle(images)
+
