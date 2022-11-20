@@ -7,7 +7,7 @@ from tensorflow.keras.layers import Dense, Flatten, Dropout, Input
 from tensorflow.keras.models import *
 from tensorflow.keras.optimizers import Adam, Adagrad
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from keras.applications.densenet import DenseNet121
+from keras.applications.inception_v3 import InceptionV3
 import tensorflow_addons as tfa
 from sklearn.metrics import ConfusionMatrixDisplay
 from sklearn.metrics import plot_confusion_matrix
@@ -35,9 +35,9 @@ session = InteractiveSession(config=config)
 
 
 
-def create_densenet(model_name, fold_path, model_path, optimizer=Adam(learning_rate=0.0001)):
+def create_inception(model_name, fold_path, model_path, optimizer=Adam(learning_rate=0.0001)):
   inputs = tf.keras.Input(shape=(224, 224, 3))
-  head_model = DenseNet121(weights = 'imagenet', include_top = False, input_shape = (224,224,3))
+  head_model = InceptionV3(weights = 'imagenet', include_top = False, input_shape = (224,224,3))
 
   head_model.trainable = True
 
@@ -101,7 +101,7 @@ def train_densenet_model(model4, train_generator, validation_generator, model_pa
   return model4, model4_history
 
 
-def train_k_fold_densenet(kfold_path_original, kfold_models_path, k=5, epochs=100):
+def train_k_fold_inception(kfold_path_original, kfold_models_path, k=5, epochs=100):
   # iteramos por cada fold para generar su modelo
   for i in range(k, 10):
     print("Entrenando fold {}".format(i))
@@ -109,7 +109,7 @@ def train_k_fold_densenet(kfold_path_original, kfold_models_path, k=5, epochs=10
     model_name = 'kfold_model_' + str(i)
     kfold_path = kfold_path_original + str(i)
     # generamos el modelo
-    new_model, train_generator, validation_generator = create_densenet(model_name, kfold_path, kfold_models_path, Adam(lr=0.01))
+    new_model, train_generator, validation_generator = create_inception(model_name, kfold_path, kfold_models_path, Adam(lr=0.0001))
 
     batch_size = 8
     steps_per_epoch = train_generator.n // batch_size
@@ -135,7 +135,7 @@ def train_k_fold_densenet(kfold_path_original, kfold_models_path, k=5, epochs=10
     new_model.save_weights(kfold_models_path + "{}_last.h5".format(model_name))
 
 
-def evaluate_k_fold_densenet(kfold_path_original, kfold_models_path, k=5):
+def evaluate_k_fold_inception(kfold_path_original, kfold_models_path, k=5):
   hist_all = []
   f1_all = []
   acc_all = []
@@ -148,7 +148,7 @@ def evaluate_k_fold_densenet(kfold_path_original, kfold_models_path, k=5):
 
     # cargamos el demolo
     filepath = kfold_models_path + model_name + "_best.hdf5"
-    model, train_generator, validation_generator = create_densenet(model_name, kfold_path, kfold_models_path, Adam(lr=0.01))
+    model, train_generator, validation_generator = create_inception(model_name, kfold_path, kfold_models_path, Adagrad(lr=0.0001))
     model.load_weights(filepath)
 
     # cargamos el historial
@@ -157,9 +157,9 @@ def evaluate_k_fold_densenet(kfold_path_original, kfold_models_path, k=5):
     
     test_datagen  = ImageDataGenerator(rescale=1./255)
     test_generator =  test_datagen.flow_from_directory(kfold_path + '/Test',
-            batch_size=64,
+            batch_size=8,
             class_mode  = 'categorical',
-            target_size = (224, 224))
+            target_size = (224, 224), shuffle = False)
 
     test_lost, test_f1, test_acc = model.evaluate(test_generator)
     f1_all.append(test_f1)
@@ -193,6 +193,6 @@ def evaluate_k_fold_densenet(kfold_path_original, kfold_models_path, k=5):
 
 
 kfold_path = "/home/fundamentia/python/corpus/transformadas_640/clasificadas/Fold"
-kfold_models_path = "/home/fundamentia/python/tfm_breast_cancer_detection/modelos/DenseNet_models/kfold/"
-# train_k_fold_densenet(kfold_path, kfold_models_path, k=5, epochs=100)
-evaluate_k_fold_densenet(kfold_path, kfold_models_path, k=0)
+kfold_models_path = "/home/fundamentia/python/tfm_breast_cancer_detection/modelos/inception_models/kfold/"
+train_k_fold_inception(kfold_path, kfold_models_path, k=5, epochs=100)
+evaluate_k_fold_inception(kfold_path, kfold_models_path, k=0)

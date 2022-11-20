@@ -1,26 +1,25 @@
 #importacion de librerias
-import numpy as np
-import tensorflow as tf
-from tensorflow.compat.v1 import ConfigProto
-from tensorflow.compat.v1 import InteractiveSession
-from tensorflow.keras.layers import Dense, Flatten, Dropout, Input
-from tensorflow.keras.models import *
-from tensorflow.keras.optimizers import Adam, Adagrad
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from keras.applications.densenet import DenseNet121
-import tensorflow_addons as tfa
-from sklearn.metrics import ConfusionMatrixDisplay
-from sklearn.metrics import plot_confusion_matrix
-from sklearn.metrics import confusion_matrix, classification_report
-import matplotlib.pyplot as plt
-import seaborn as sns
-import statistics
 import os
+import statistics
+
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+import tensorflow as tf
+import tensorflow_addons as tfa
+from keras.applications.densenet import DenseNet121
+from sklearn.metrics import (ConfusionMatrixDisplay, classification_report,
+                             confusion_matrix, plot_confusion_matrix)
+from tensorflow.compat.v1 import ConfigProto, InteractiveSession
+from tensorflow.keras.layers import Dense, Dropout, Flatten, Input
+from tensorflow.keras.models import *
+from tensorflow.keras.optimizers import Adagrad, Adam
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 
 def create_DenseNet(model_name, fold_path, model_path, optimizer=Adam(learning_rate=0.0001)):
   inputs = tf.keras.Input(shape=(224, 224, 3))
-  head_model = densenet.DenseNet121(weights = 'imagenet', include_top = False, input_shape = (224,224,3))
+  head_model = DenseNet121(weights = 'imagenet', include_top = False, input_shape = (224,224,3))
 
   head_model.trainable = True
 
@@ -50,12 +49,12 @@ def create_DenseNet(model_name, fold_path, model_path, optimizer=Adam(learning_r
 
   # Note that the validation data should not be augmented!
   train_generator = train_datagen.flow_from_directory(fold_path + '/Train',
-                                                      batch_size=32,
+                                                      batch_size=8,
                                                       class_mode='categorical',
                                                       target_size=(224, 224))     
 
   validation_generator =  validation_datagen.flow_from_directory(fold_path + '/Valid',
-                                                          batch_size=32,
+                                                          batch_size=8,
                                                           class_mode  = 'categorical',
                                                           target_size = (224, 224))
 
@@ -68,7 +67,7 @@ def create_DenseNet(model_name, fold_path, model_path, optimizer=Adam(learning_r
 
 
 def train_DenseNet_model(model, train_generator, validation_generator, model_path, model_name, epochs=100):
-  batch_size = 32
+  batch_size = 8
   steps_per_epoch = train_generator.n // batch_size
   validation_steps = validation_generator.n // batch_size
 
@@ -87,3 +86,23 @@ def train_DenseNet_model(model, train_generator, validation_generator, model_pat
       validation_steps = validation_steps
   )
   return model, model4_history
+
+
+def evaluate_model(model, kfold_path):
+  test_datagen  = ImageDataGenerator(rescale=1./255)
+  test_generator =  test_datagen.flow_from_directory(kfold_path + '/Test',
+          batch_size=16,
+          class_mode  = 'categorical',
+          target_size = (224, 224))
+
+  test_lost, test_f1, test_acc = model.evaluate(test_generator)
+  print('\n\n\nTEST ACCURACY:', test_acc)
+  print('\n\n\n')
+  return test_lost, test_f1, test_acc
+
+
+
+# model, _, _ = create_DenseNet("nombre", "/home/fundamentia/python/corpus/transformadas_640/clasificadas/Fold0", "", Adagrad(learning_rate=0.0001))
+# model.load_weights("/home/fundamentia/python/tfm_breast_cancer_detection/modelos/inception_models/model_inception_hyper/model_DenseNet_Adagrad_0.0001_best.hdf5")
+# model = load_model("/home/fundamentia/python/tfm_breast_cancer_detection/modelos/inception_models/model_inception_hyper/model_DenseNet_Adagrad_0.0001_best.hdf5")
+

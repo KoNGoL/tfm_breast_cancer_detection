@@ -136,12 +136,12 @@ def train_k_fold_VGG16(kfold_path, kfold_models_path, k=5, epochs=100):
     new_model.save_weights(kfold_models_path + "{}_last.h5".format(model_name))
 
 
-def evaluate_k_fold_VGG16(kfold_path_original, kfold_models_path, k=5):
+def evaluate_k_fold_VGG16(kfold_path_original, kfold_models_path, k=0):
   hist_all = []
   f1_all = []
   acc_all = []
   # iteramos por cada fold para generar su modelo
-  for i in range(0, 10):
+  for i in range(k, 10):
     # escogemos el modelo del k_fold
     print("Validando fold {}".format(i))
     model_name = 'kfold_model_' + str(i)
