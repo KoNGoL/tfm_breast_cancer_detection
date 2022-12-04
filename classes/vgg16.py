@@ -7,7 +7,7 @@ from tensorflow.keras.layers import Dense, Flatten, Dropout, Input
 from tensorflow.keras.models import *
 from tensorflow.keras.optimizers import Adam, Adagrad
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from keras.applications.inception_v3 import InceptionV3
+from tensorflow.keras.applications import VGG16
 import tensorflow_addons as tfa
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -16,9 +16,9 @@ import os
 import cv2
 
 
-def create_inception(fold_path, optimizer=Adam(learning_rate=0.0001), num_classes=2, batch_size=32):
+def create_vgg16(fold_path, optimizer=Adam(learning_rate=0.0001), num_classes=2, batch_size=32):
     inputs = tf.keras.Input(shape=(224, 224, 3))
-    head_model = InceptionV3(weights = 'imagenet', include_top = False, input_shape = (224,224,num_classes))
+    head_model = VGG16(weights = 'imagenet', include_top = False, input_shape = (224,224,num_classes))
 
     head_model.trainable = True
 
@@ -44,6 +44,8 @@ def create_inception(fold_path, optimizer=Adam(learning_rate=0.0001), num_classe
                     optimizer=optimizer,
                     metrics=[tfa.metrics.F1Score(num_classes=num_classes, average='micro'), 'accuracy'])
 
+
+
     validation_datagen  = ImageDataGenerator(rescale=1./255)
 
     if (fold_path is None):
@@ -63,7 +65,7 @@ def create_inception(fold_path, optimizer=Adam(learning_rate=0.0001), num_classe
     return model4, train_generator, validation_generator
 
 
-def train_inception_model(model, train_generator, validation_generator, model_path, model_name, epochs=100):
+def train_vgg16_model(model, train_generator, validation_generator, model_path, model_name, epochs=100):
   batch_size = 12
   steps_per_epoch = train_generator.n // batch_size
   validation_steps = validation_generator.n // batch_size
@@ -98,8 +100,8 @@ def evaluate_model(model, kfold_path):
   return test_lost, test_f1, test_acc
 
 
-# model, _, _ = create_inception("nombre", "/home/fundamentia/python/corpus/transformadas_640/clasificadas/Fold0", "", Adagrad(learning_rate=0.0001))
-# model.load_weights("/home/fundamentia/python/tfm_breast_cancer_detection/modelos/inception_models/model_inception_hyper/model_DenseNet_Adagrad_0.0001_best.hdf5")
+# model, _, _ = create_vgg16("nombre", "/home/fundamentia/python/corpus/transformadas_640/clasificadas/Fold0", "", Adagrad(learning_rate=0.0001))
+# model.load_weights("/home/fundamentia/python/tfm_breast_cancer_detection/modelos/vgg16models/model_vgg16_hyper/model_DenseNet_Adagrad_0.0001_best.hdf5")
 
 # image = cv2.imread("/home/fundamentia/python/corpus/transformadas_640/clasificadas/Fold0/Test/Calc/Calc-Test_P_00038_LEFT_MLO_1.png", cv2.COLOR_BGR2RGB)
 # # images_list_norm = image.astype('float32')

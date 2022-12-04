@@ -159,7 +159,7 @@ def evaluate_k_fold_inception(kfold_path_original, kfold_models_path, k=5):
     test_generator =  test_datagen.flow_from_directory(kfold_path + '/Test',
             batch_size=8,
             class_mode  = 'categorical',
-            target_size = (224, 224), shuffle = False)
+            target_size = (224, 224))
 
     test_lost, test_f1, test_acc = model.evaluate(test_generator)
     f1_all.append(test_f1)
@@ -181,18 +181,18 @@ def evaluate_k_fold_inception(kfold_path_original, kfold_models_path, k=5):
     # plt.show()
 
 
-  fold_labels = ['Fold0', 'Fold1', 'Fold2', 'Fold3', 'Fold4', 'Fold5', 'Fold6', 'Fold7', 'Fold8', 'Fold9']
-  palette = sns.color_palette('hls', 10)
-  fig, ax = plt.subplots()
-  sns.set()
-  ax.set(ylim=(0,1))
-  ax.set(xlabel='Fold', ylabel='F1-score')
-  p = sns.barplot(x=fold_labels, y=f1_all, ax = ax, palette=palette)
+  # fold_labels = ['Fold0', 'Fold1', 'Fold2', 'Fold3', 'Fold4', 'Fold5', 'Fold6', 'Fold7', 'Fold8', 'Fold9']
+  # palette = sns.color_palette('hls', 10)
+  # fig, ax = plt.subplots()
+  # sns.set()
+  # ax.set(ylim=(0,1))
+  # ax.set(xlabel='Fold', ylabel='F1-score')
+  # p = sns.barplot(x=fold_labels, y=f1_all, ax = ax, palette=palette)
   print("Media: {}".format(statistics.mean(f1_all)))
   print("Desviación standar: {}".format(statistics.stdev(f1_all)))
 
 
 kfold_path = "/home/fundamentia/python/corpus/transformadas_640/clasificadas/Fold"
 kfold_models_path = "/home/fundamentia/python/tfm_breast_cancer_detection/modelos/inception_models/kfold/"
-train_k_fold_inception(kfold_path, kfold_models_path, k=5, epochs=100)
+# train_k_fold_inception(kfold_path, kfold_models_path, k=0, epochs=100)
 evaluate_k_fold_inception(kfold_path, kfold_models_path, k=0)

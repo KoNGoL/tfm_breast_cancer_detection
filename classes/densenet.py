@@ -17,53 +17,53 @@ from tensorflow.keras.optimizers import Adagrad, Adam
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 
 
-def create_DenseNet(model_name, fold_path, model_path, optimizer=Adam(learning_rate=0.0001)):
-  inputs = tf.keras.Input(shape=(224, 224, 3))
-  head_model = DenseNet121(weights = 'imagenet', include_top = False, input_shape = (224,224,3))
+def create_densenet(fold_path, optimizer=Adam(learning_rate=0.0001), num_classes=2, batch_size=32):
+    inputs = tf.keras.Input(shape=(224, 224, 3))
+    head_model = DenseNet121(weights = 'imagenet', include_top = False, input_shape = (224,224,num_classes))
 
-  head_model.trainable = True
+    head_model.trainable = True
 
-  head_model = head_model(inputs, training = True)
-  head_model = tf.keras.layers.Flatten()(head_model)
-  head_model = tf.keras.layers.Dense(256, activation='relu')(head_model)
+    head_model = head_model(inputs, training = True)
+    head_model = tf.keras.layers.Flatten()(head_model)
+    head_model = tf.keras.layers.Dense(256, activation='relu')(head_model)
+    output = Dense(num_classes, activation='softmax')(head_model)
+    model4 = Model(inputs=inputs, outputs = output)
 
-  # head_model = tf.keras.layers.Dense(1000, kernel_regularizer=regularizers.l1_l2(0.01), activity_regularizer=regularizers.l2(0.01), activation='relu')(head_model)
-  # # head_model = Activation('relu')(head_model)
-  # head_model = tf.keras.layers.Dense(500, kernel_regularizer=regularizers.l1_l2(0.01), activity_regularizer=regularizers.l2(0.01), activation='relu')(head_model)
-  # # head_model = Activation('relu')(head_model)
-  output = Dense(3, activation='softmax')(head_model)
-  model4 = Model(inputs=inputs, outputs = output)
+    train_datagen = ImageDataGenerator(
+        rescale=1./255,
+        rotation_range=40,
+        width_shift_range=0.2,
+        height_shift_range=0.2,
+        shear_range=0.2,
+        zoom_range=0.2,
+        horizontal_flip=True,
+        fill_mode='nearest'
+    )
 
-  train_datagen = ImageDataGenerator(
-      rescale=1./255,
-      rotation_range=40,
-      width_shift_range=0.2,
-      height_shift_range=0.2,
-      shear_range=0.2,
-      zoom_range=0.2,
-      horizontal_flip=True,
-      fill_mode='nearest'
-  )
+    # compilamos el modelo y lo entrenamos
+    model4.compile(loss="categorical_crossentropy", 
+                    optimizer=optimizer,
+                    metrics=[tfa.metrics.F1Score(num_classes=num_classes, average='micro'), 'accuracy'])
 
-  validation_datagen  = ImageDataGenerator(rescale=1./255)
 
-  # Note that the validation data should not be augmented!
-  train_generator = train_datagen.flow_from_directory(fold_path + '/Train',
-                                                      batch_size=8,
-                                                      class_mode='categorical',
-                                                      target_size=(224, 224))     
 
-  validation_generator =  validation_datagen.flow_from_directory(fold_path + '/Valid',
-                                                          batch_size=8,
-                                                          class_mode  = 'categorical',
-                                                          target_size = (224, 224))
+    validation_datagen  = ImageDataGenerator(rescale=1./255)
 
-  # compilamos el modelo y lo entrenamos
-  model4.compile(loss="categorical_crossentropy", 
-                optimizer=optimizer,
-                metrics=[tfa.metrics.F1Score(num_classes=3, average='micro'), 'accuracy'])
-  
-  return model4, train_generator, validation_generator
+    if (fold_path is None):
+        return model4
+
+    # Note that the validation data should not be augmented!
+    train_generator = train_datagen.flow_from_directory(fold_path + '/Train',
+                                                        batch_size=batch_size,
+                                                        class_mode='categorical',
+                                                        target_size=(224, 224))     
+
+    validation_generator =  validation_datagen.flow_from_directory(fold_path + '/Valid',
+                                                            batch_size=batch_size,
+                                                            class_mode  = 'categorical',
+                                                            target_size = (224, 224))
+    
+    return model4, train_generator, validation_generator
 
 
 def train_DenseNet_model(model, train_generator, validation_generator, model_path, model_name, epochs=100):

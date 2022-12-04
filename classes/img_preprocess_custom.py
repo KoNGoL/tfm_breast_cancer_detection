@@ -9,7 +9,7 @@ from random import randrange
 from PIL import Image
 
 #convertir diccom a png
-def convert_diccom_to_png(in_file):
+def convert_diccom_to_png(in_file, work_dir = ''):
   ds = dicom.dcmread(os.path.join(in_file))
   pixel_array_numpy = ds.pixel_array
   try:
@@ -156,9 +156,9 @@ def process_ddsm_folder(input_folder, output_folder):
           img = convert_diccom_to_png(os.path.join(dir_path, file_name))
           # cv2.imwrite(os.path.join(output_folder + "originales_mask/", folder_name + ".png"), img)
           # recortar imagen
-          # img = crop_img(img)
+          img = crop_img(img)
           # # reescalar imagen
-          # img = rescale_img(img, 640, 640)
+          img = rescale_img(img, 640, 640)
           if not is_mask:
           #   # eliminar ruido
             img = remove_noise(img)
@@ -277,16 +277,16 @@ def create_random_img(input_folder, output_folder):
     cv2.imwrite(os.path.join(output_folder + "/Otros", file), new_image)
 
 
-input_path = "/home/fundamentia/python/corpus/manifest-ZkhPvrLo5216730872708713142/CBIS-DDSM/"
-output_path = "/home/fundamentia/python/corpus/transformadas_640/"
-# process_ddsm_folder(input_path, output_path)
-# generate_pascal_voc_xml(output_path + "originales_mask/", output_path + "xml_separadas_originales/")
+# input_path = "/home/fundamentia/python/corpus/manifest-ZkhPvrLo5216730872708713142/CBIS-DDSM/"
+# output_path = "/home/fundamentia/python/corpus/transformadas_640/"
+# # process_ddsm_folder(input_path, output_path)
+# # generate_pascal_voc_xml(output_path + "originales_mask/", output_path + "xml_separadas_originales/")
 
-# create_random_img("/home/fundamentia/python/corpus/transformadas_640/originales", "/home/fundamentia/python/corpus/transformadas_640/clasificadas/imagenes/")
+# # create_random_img("/home/fundamentia/python/corpus/transformadas_640/originales", "/home/fundamentia/python/corpus/transformadas_640/clasificadas/imagenes/")
 
-input_folder_xml = "/home/fundamentia/python/corpus/transformadas_640/xml_separadas_originales/"
-input_folder_png = "/home/fundamentia/python/corpus/transformadas_640/originales/"
-output_folder = "/home/fundamentia/python/corpus/transformadas_640/clasificadas/"
+# input_folder_xml = "/home/fundamentia/python/corpus/transformadas_640/xml_separadas_originales/"
+# input_folder_png = "/home/fundamentia/python/corpus/transformadas_640/originales/"
+# output_folder = "/home/fundamentia/python/corpus/transformadas_640/clasificadas/"
 # cut_reescale_anomaly_img(input_folder_xml, input_folder_png, output_folder)
 
 
