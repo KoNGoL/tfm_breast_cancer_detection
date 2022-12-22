@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Detección masas cancerígenas en mamografías</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous"/>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+    <script src="https://malsup.github.io/jquery.blockUI.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+    <script src="{{ url_for('static', filename='js/javascript.js')}}"></script>
+  </head>
+
+  <body>
+    <div class="py-4">
+      <!-- For demo purpose -->
+      <header class="text-white text-center">
+        <h1 class="display-5">
+          Identificación de anomalías en mamografías en tiempo real
+        </h1>
+        <p class="mb-5 font-weight-light">
+          <a href="https://github.com/KoNGoL/tfm_breast_cancer_detection" class="text-white">Codigo fuente en GitHub</a>
+        </p>
+
+        <div class="row">
+          <div class="col-md-6" style="width:100%">
+            <div class="row py-4" style="height: 100%;  margin-left:40%"">
+              <div class="col-lg-6 align-self-center mx-auto" >
+                <div id="upload_image_container" class="input-group mb-3 px-2 py-2 rounded-pill bg-white shadow-sm" style="margin-left: 10px;">
+                  <input id="upload" type="file" class="form-control border-0"/>
+                  <div class="input-group-append">
+                    <label for="upload" class="btn btn-light m-0 rounded-pill px-4">
+                      <small class="text-uppercase font-weight-bold text-muted">Elige imagen</small>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="row py-4">
+                  <div class="col-lg-6 mx-auto">
+                    <button id="submit_button"type="button"class="btn btn-info rounded-pill btn-lg btn-block" style=" margin-left: 40px;">
+                      Analizar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+
+      <!-- mostramos las dos imagenes en paralelo -->
+      <div id="images_div"class="text-center" style="display:none">
+        <div class="">
+          <div id="image_div">
+            <div id="yolo_div" style="float:left">
+              <div class="texto">Resultados de Yolo</div>
+            </div>
+            <div id="retinanet_div" style="float:left">
+              <div class="texto">Resultados de Retinanet</div>
+            </div>
+          </div>
+        </div>
+    </div>
+  </body>
+</html>

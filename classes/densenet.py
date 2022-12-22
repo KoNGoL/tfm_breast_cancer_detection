@@ -8,9 +8,6 @@ import seaborn as sns
 import tensorflow as tf
 import tensorflow_addons as tfa
 from keras.applications.densenet import DenseNet121
-from sklearn.metrics import (ConfusionMatrixDisplay, classification_report,
-                             confusion_matrix, plot_confusion_matrix)
-from tensorflow.compat.v1 import ConfigProto, InteractiveSession
 from tensorflow.keras.layers import Dense, Dropout, Flatten, Input
 from tensorflow.keras.models import *
 from tensorflow.keras.optimizers import Adagrad, Adam
