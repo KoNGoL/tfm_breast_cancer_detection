@@ -11,7 +11,7 @@ from shutil import rmtree
 from classes.test_classifier import test_clasiffier_img_folder
 import classes.img_preprocess_utils as img_preprocess_utils
 from classes.retinanet_identification import RetinaNet
-import yolov7.detect_custom as yolov7
+import classes.detect_custom as yolov7
 from multiprocessing import Process, Queue
 
 work_dir = None
@@ -55,7 +55,7 @@ def pre_process_image(diccom_image_path):
     dic_img = img_preprocess_utils.rescale_img(dic_img, 640, 640, True)
     dic_img = img_preprocess_utils.clahe(dic_img)
 
-    cv2.imwrite("/home/fundamentia/tmp/final_img.png", dic_img)
+    # cv2.imwrite("/home/fundamentia/tmp/final_img.png", dic_img)
     return dic_img
 
 
