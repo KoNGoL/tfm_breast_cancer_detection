@@ -11,7 +11,7 @@ from shutil import rmtree
 from classes.test_classifier import test_clasiffier_img_folder
 import classes.img_preprocess_utils as img_preprocess_utils
 from classes.retinanet_identification import RetinaNet
-import classes.detect_custom as yolov7
+import classes.detect_custom_yolo as yolov7
 from multiprocessing import Process, Queue
 
 work_dir = None

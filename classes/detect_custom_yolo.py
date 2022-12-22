@@ -2,18 +2,19 @@ import argparse
 import time
 import sys
 sys.path.insert(1, '/home/fundamentia/python/tfm_breast_cancer_detection/')
+sys.path.insert(2, '/home/fundamentia/python/tfm_breast_cancer_detection/yolo7/')
 from pathlib import Path
 
 import cv2
 import torch
 from numpy import random
 
-from models.experimental import attempt_load
-from utils_yolo.datasets import  LoadImages
-from utils_yolo.general import check_img_size, non_max_suppression, \
+from yolov7.models.experimental import attempt_load
+from yolov7.utils_yolo.datasets import  LoadImages
+from yolov7.utils_yolo.general import check_img_size, non_max_suppression, \
     scale_coords, xyxy2xywh, set_logging, increment_path
-from utils_yolo.plots import plot_one_box
-from utils_yolo.torch_utils import select_device, time_synchronized, TracedModel
+from yolov7.utils_yolo.plots import plot_one_box
+from yolov7.utils_yolo.torch_utils import select_device, time_synchronized, TracedModel
 from classes.img_preprocess_utils import cut_boxes, save_box
 from classes.bounding_box import BoundingBox
 
